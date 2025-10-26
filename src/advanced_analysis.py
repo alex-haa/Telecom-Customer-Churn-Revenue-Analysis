@@ -1,14 +1,3 @@
-"""
-Telecom Customer Churn Analysis - Advanced Python Analytics
-===========================================================
-
-This script provides:
-1. Cohort Analysis
-2. Predictive Churn Modeling
-3. Customer Segmentation
-4. Revenue Impact Analysis
-"""
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

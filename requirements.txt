@@ -1,0 +1,24 @@
+# PostgreSQL Dependencies for Telecom Churn Analysis
+# =================================================
+
+# Core data analysis
+pandas>=1.3.0
+numpy>=1.21.0
+
+# Visualization
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# Machine Learning
+scikit-learn>=1.0.0
+
+# PostgreSQL connectivity
+psycopg2-binary>=2.9.0
+sqlalchemy>=1.4.0
+
+# Optional: For better PostgreSQL performance
+psycopg2>=2.9.0
+
+# Development and testing
+jupyter>=1.0.0
+notebook>=6.4.0

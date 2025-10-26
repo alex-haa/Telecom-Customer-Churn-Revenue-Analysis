@@ -68,6 +68,89 @@ This project provides a comprehensive analysis of telecom customer churn pattern
 2. **Service Improvement**: Address root causes of Fiber optic service dissatisfaction
 3. **Customer Experience Enhancement**: Improve overall customer experience to reduce churn
 
+## 🚀 **How to Run the Project**
+
+### **Option 1: PostgreSQL Setup (Recommended)**
+
+#### **Prerequisites**
+1. **Install PostgreSQL**: Download from https://www.postgresql.org/download/windows/
+2. **Remember the password** you set for the `postgres` user
+
+#### **Quick Start (3 Steps)**
+```bash
+# Step 1: Install Python dependencies
+cd "c:\Users\jluon\data vis\Telecom-Customer-Churn-Revenue-Analysis"
+pip install -r requirements.txt
+
+# Step 2: Set up PostgreSQL database and load data
+python setup_postgresql.py
+
+# Step 3: Run the complete analysis
+python run_postgresql_analysis.py
+```
+
+#### **What You'll Get**
+- ✅ PostgreSQL database `telecom_churn` with 7,043 customer records
+- ✅ Comprehensive SQL analysis with CLV, churn drivers, revenue impact
+- ✅ Automated visualizations (`telecom_churn_postgresql_analysis.png`)
+- ✅ Business insights and strategic recommendations
+- ✅ Database ready for Tableau connection
+
+#### **Expected Output**
+```
+============================================================
+POSTGRESQL SETUP FOR TELECOM CHURN ANALYSIS
+============================================================
+✅ Created database: telecom_churn
+✅ Successfully loaded 7043 records into telecom_customers table
+✅ Analysis views created successfully
+✅ Database verification: 26.54% churn rate
+
+============================================================
+TELECOM CUSTOMER CHURN ANALYSIS - POSTGRESQL
+============================================================
+✅ Connected to PostgreSQL database: telecom_churn
+📊 CLV Analysis by Contract and Service
+💰 Revenue Impact: $1,669,570.20 annual revenue lost
+🎯 Strategic Recommendations provided
+✅ POSTGRESQL ANALYSIS COMPLETED SUCCESSFULLY!
+```
+
+### **Option 2: Python-Only Analysis**
+
+#### **Quick Start**
+```bash
+# Install dependencies
+pip install pandas numpy matplotlib seaborn scikit-learn
+
+# Run Python analysis
+python src/advanced_analysis.py
+```
+
+#### **What You'll Get**
+- ✅ Cohort analysis and customer segmentation
+- ✅ Predictive modeling (Random Forest & Logistic Regression)
+- ✅ Revenue impact analysis
+- ✅ Visualizations (`telecom_churn_analysis.png`)
+- ✅ Business insights and recommendations
+
+### **Option 3: SQL Queries Only**
+
+#### **For PostgreSQL**
+```bash
+# Connect to PostgreSQL
+psql -U postgres -d telecom_churn
+
+# Run queries
+\i src/queries_postgresql.sql
+```
+
+#### **For Other SQL Databases**
+```bash
+# Run queries from src/queries.sql
+# Compatible with MySQL, SQL Server, Oracle, etc.
+```
+
 ## 🛠️ Technical Implementation
 
 ### Files Structure
@@ -77,11 +160,16 @@ Telecom-Customer-Churn-Revenue-Analysis/
 │   └── WA_Fn-UseC_-Telco-Customer-Churn.csv
 ├── src/
 │   ├── queries.sql                    # SQL analysis queries
+│   ├── queries_postgresql.sql         # PostgreSQL-specific queries
 │   ├── advanced_analysis.py           # Python analytics & ML models
 │   └── analyze_data.py                # Data exploration script
+├── setup_postgresql.py                # PostgreSQL database setup
+├── run_postgresql_analysis.py         # PostgreSQL analysis runner
+├── requirements.txt                   # Python dependencies
 ├── tab/
 │   └── dashboard.twbx                 # Tableau dashboard
-├── telecom_churn_analysis.png         # Generated visualizations
+├── telecom_churn_analysis.png         # Python-generated visualizations
+├── telecom_churn_postgresql_analysis.png # PostgreSQL-generated visualizations
 └── README.md                          # This documentation
 ```
 
@@ -138,6 +226,50 @@ Telecom-Customer-Churn-Revenue-Analysis/
 - Contract and tenure information
 - Churn status (historical and current)
 
+## 📊 **Tableau Integration**
+
+### **Connect Tableau to PostgreSQL**
+1. Open Tableau Desktop
+2. Connect → PostgreSQL
+3. Server: `localhost`
+4. Port: `5432`
+5. Database: `telecom_churn`
+6. Username: `postgres`
+7. Password: `your_password`
+
+### **Available Tables & Views**
+- `telecom_customers` - Main customer data
+- `customer_segments` - Customer segmentation view
+- `churn_summary` - Churn analysis summary
+
+### **Custom Analysis**
+```python
+# Example: Run custom queries
+from run_postgresql_analysis import TelecomPostgresAnalyzer
+
+analyzer = TelecomPostgresAnalyzer()
+analyzer.connect()
+
+custom_query = """
+SELECT Contract, AVG(MonthlyCharges) as avg_charges
+FROM telecom_customers
+WHERE Churn = 'No'
+GROUP BY Contract;
+"""
+
+result = analyzer.run_sql_query(custom_query, "Custom Analysis")
+print(result)
+```
+
+### **Export Results**
+```python
+# Export to CSV
+result.to_csv('analysis_results.csv', index=False)
+
+# Export to Excel
+result.to_excel('analysis_results.xlsx', index=False)
+```
+
 **Analysis Completed**: January 2025  
 **Data Source**: Telco Customer Churn Dataset (Kaggle)  
-**Methodology**: SQL Analytics + Python ML + Tableau Visualization
+**Methodology**: SQL Analytics + Python ML + Tableau Visualization + PostgreSQL Integration
