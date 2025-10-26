@@ -1,9 +1,9 @@
 """
-PostgreSQL Analysis Runner for Telecom Customer Churn
-====================================================
+PostgreSQL Analysis Runner for Telecom Customer Churn - FIXED VERSION
+====================================================================
 
 This script connects to PostgreSQL and runs the complete analysis
-using SQL queries and Python analytics.
+using SQL queries and Python analytics with proper PostgreSQL syntax.
 """
 
 import pandas as pd
@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class TelecomPostgresAnalyzer:
     def __init__(self, host='localhost', port=5432, database='telecom_churn', 
-                 user='postgres', password='password'):
+                 user='postgres', password='Alex4305'):
         """Initialize PostgreSQL connection"""
         self.host = host
         self.port = port
@@ -61,30 +61,30 @@ class TelecomPostgresAnalyzer:
         query = """
         WITH customer_clv AS (
             SELECT 
-                customerID,
-                Contract,
-                InternetService,
+                "customerID",
+                "Contract",
+                "InternetService",
                 tenure,
-                MonthlyCharges,
-                TotalCharges,
-                Churn,
+                "MonthlyCharges",
+                "TotalCharges",
+                "Churn",
                 CASE 
-                    WHEN TotalCharges > 0 THEN TotalCharges
-                    ELSE MonthlyCharges * tenure 
+                    WHEN "TotalCharges" > 0 THEN "TotalCharges"
+                    ELSE "MonthlyCharges" * tenure 
                 END AS clv
             FROM telecom_customers
         )
         SELECT 
-            Contract,
-            InternetService,
+            "Contract",
+            "InternetService",
             COUNT(*) AS customer_count,
-            ROUND(AVG(clv), 2) AS avg_clv,
-            ROUND(AVG(MonthlyCharges), 2) AS avg_monthly_charges,
-            ROUND(AVG(tenure), 1) AS avg_tenure_months,
-            SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-            ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent
+            ROUND(AVG(clv)::numeric, 2) AS avg_clv,
+            ROUND(AVG("MonthlyCharges")::numeric, 2) AS avg_monthly_charges,
+            ROUND(AVG(tenure)::numeric, 1) AS avg_tenure_months,
+            SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+            ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent
         FROM customer_clv
-        GROUP BY Contract, InternetService
+        GROUP BY "Contract", "InternetService"
         ORDER BY avg_clv DESC;
         """
         
@@ -105,8 +105,8 @@ class TelecomPostgresAnalyzer:
         query = """
         SELECT 
             COUNT(*) AS total_customers,
-            SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-            ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent
+            SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+            ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent
         FROM telecom_customers;
         """
         
@@ -120,13 +120,13 @@ class TelecomPostgresAnalyzer:
         # Churn by contract type
         query = """
         SELECT 
-            Contract,
+            "Contract",
             COUNT(*) AS total_customers,
-            SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-            ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent,
-            ROUND(AVG(MonthlyCharges), 2) AS avg_monthly_charges
+            SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+            ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent,
+            ROUND(AVG("MonthlyCharges")::numeric, 2) AS avg_monthly_charges
         FROM telecom_customers
-        GROUP BY Contract
+        GROUP BY "Contract"
         ORDER BY churn_rate_percent DESC;
         """
         
@@ -146,9 +146,9 @@ class TelecomPostgresAnalyzer:
         # Revenue lost due to churn
         query = """
         SELECT 
-            SUM(CASE WHEN Churn = 'Yes' THEN MonthlyCharges ELSE 0 END) AS monthly_revenue_lost,
-            SUM(CASE WHEN Churn = 'Yes' THEN MonthlyCharges * 12 ELSE 0 END) AS annual_revenue_lost,
-            SUM(CASE WHEN Churn = 'Yes' THEN MonthlyCharges * tenure ELSE 0 END) AS lifetime_value_lost
+            SUM(CASE WHEN "Churn" = 'Yes' THEN "MonthlyCharges" ELSE 0 END) AS monthly_revenue_lost,
+            SUM(CASE WHEN "Churn" = 'Yes' THEN "MonthlyCharges" * 12 ELSE 0 END) AS annual_revenue_lost,
+            SUM(CASE WHEN "Churn" = 'Yes' THEN "MonthlyCharges" * tenure ELSE 0 END) AS lifetime_value_lost
         FROM telecom_customers;
         """
         
@@ -163,24 +163,24 @@ class TelecomPostgresAnalyzer:
         query = """
         WITH churn_revenue AS (
             SELECT 
-                Contract,
-                InternetService,
+                "Contract",
+                "InternetService",
                 COUNT(*) AS churned_customers,
-                ROUND(AVG(MonthlyCharges), 2) AS avg_monthly_charges,
-                ROUND(COUNT(*) * AVG(MonthlyCharges), 2) AS monthly_revenue_lost,
-                ROUND(COUNT(*) * AVG(MonthlyCharges) * 12, 2) AS annual_revenue_lost
+                ROUND(AVG("MonthlyCharges")::numeric, 2) AS avg_monthly_charges,
+                ROUND((COUNT(*) * AVG("MonthlyCharges"))::numeric, 2) AS monthly_revenue_lost,
+                ROUND((COUNT(*) * AVG("MonthlyCharges") * 12)::numeric, 2) AS annual_revenue_lost
             FROM telecom_customers
-            WHERE Churn = 'Yes'
-            GROUP BY Contract, InternetService
+            WHERE "Churn" = 'Yes'
+            GROUP BY "Contract", "InternetService"
         )
         SELECT 
-            Contract,
-            InternetService,
+            "Contract",
+            "InternetService",
             churned_customers,
             avg_monthly_charges,
             monthly_revenue_lost,
             annual_revenue_lost,
-            ROUND(annual_revenue_lost / SUM(annual_revenue_lost) OVER() * 100, 2) AS revenue_loss_percentage
+            ROUND((annual_revenue_lost / SUM(annual_revenue_lost) OVER() * 100)::numeric, 2) AS revenue_loss_percentage
         FROM churn_revenue
         ORDER BY annual_revenue_lost DESC;
         """
@@ -202,24 +202,18 @@ class TelecomPostgresAnalyzer:
         query = """
         SELECT 
             CASE 
-                WHEN MonthlyCharges <= 30 THEN 'Low Price ($0-30)'
-                WHEN MonthlyCharges <= 60 THEN 'Medium Price ($31-60)'
-                WHEN MonthlyCharges <= 90 THEN 'High Price ($61-90)'
+                WHEN "MonthlyCharges" <= 30 THEN 'Low Price ($0-30)'
+                WHEN "MonthlyCharges" <= 60 THEN 'Medium Price ($31-60)'
+                WHEN "MonthlyCharges" <= 90 THEN 'High Price ($61-90)'
                 ELSE 'Premium Price ($90+)'
             END AS price_segment,
             COUNT(*) AS customer_count,
-            SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-            ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent,
-            ROUND(AVG(MonthlyCharges), 2) AS avg_monthly_charges
+            SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+            ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent,
+            ROUND(AVG("MonthlyCharges")::numeric, 2) AS avg_monthly_charges
         FROM telecom_customers
         GROUP BY price_segment
-        ORDER BY 
-            CASE 
-                WHEN price_segment = 'Low Price ($0-30)' THEN 1
-                WHEN price_segment = 'Medium Price ($31-60)' THEN 2
-                WHEN price_segment = 'High Price ($61-90)' THEN 3
-                ELSE 4
-            END;
+        ORDER BY AVG("MonthlyCharges");
         """
         
         result = self.run_sql_query(query, "Price Sensitivity Analysis")
@@ -239,23 +233,23 @@ class TelecomPostgresAnalyzer:
             # Get data for visualizations
             churn_by_contract = pd.read_sql("""
                 SELECT 
-                    Contract,
+                    "Contract",
                     COUNT(*) AS total_customers,
-                    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-                    ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent
+                    SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+                    ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent
                 FROM telecom_customers
-                GROUP BY Contract
+                GROUP BY "Contract"
                 ORDER BY churn_rate_percent DESC;
             """, self.connection)
             
             churn_by_internet = pd.read_sql("""
                 SELECT 
-                    InternetService,
+                    "InternetService",
                     COUNT(*) AS total_customers,
-                    SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-                    ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent
+                    SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+                    ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent
                 FROM telecom_customers
-                GROUP BY InternetService
+                GROUP BY "InternetService"
                 ORDER BY churn_rate_percent DESC;
             """, self.connection)
             
@@ -285,10 +279,10 @@ class TelecomPostgresAnalyzer:
             # 4. Revenue impact
             revenue_data = pd.read_sql("""
                 SELECT 
-                    Contract,
-                    SUM(CASE WHEN Churn = 'Yes' THEN MonthlyCharges * 12 ELSE 0 END) AS annual_revenue_lost
+                    "Contract",
+                    SUM(CASE WHEN "Churn" = 'Yes' THEN "MonthlyCharges" * 12 ELSE 0 END) AS annual_revenue_lost
                 FROM telecom_customers
-                GROUP BY Contract
+                GROUP BY "Contract"
                 ORDER BY annual_revenue_lost DESC;
             """, self.connection)
             
@@ -376,8 +370,15 @@ class TelecomPostgresAnalyzer:
 
 def main():
     """Main function to run PostgreSQL analysis"""
-    # Initialize analyzer
-    analyzer = TelecomPostgresAnalyzer()
+    # Try to load configuration, otherwise use defaults
+    try:
+        from config import DB_CONFIG
+        print("📋 Using configuration from config.py")
+        analyzer = TelecomPostgresAnalyzer(**DB_CONFIG)
+    except ImportError:
+        print("⚠️  config.py not found, using default settings")
+        print("💡 To avoid password prompts, create config.py with your database credentials")
+        analyzer = TelecomPostgresAnalyzer()
     
     # Run complete analysis
     analyzer.run_complete_analysis()

@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class TelecomPostgresLoader:
     def __init__(self, host='localhost', port=5432, database='telecom_churn', 
-                 user='postgres', password='password'):
+                 user='postgres', password='Alex4305'):
         """Initialize PostgreSQL connection parameters"""
         self.host = host
         self.port = port
@@ -91,8 +91,26 @@ class TelecomPostgresLoader:
             # Clean the data
             df = self.clean_data(df)
             
+            # Check if table exists and drop views first if they exist
+            from sqlalchemy import text
+            with self.engine.connect() as conn:
+                # Drop views first to avoid dependency issues
+                try:
+                    conn.execute(text("DROP VIEW IF EXISTS customer_segments CASCADE"))
+                    conn.execute(text("DROP VIEW IF EXISTS churn_summary CASCADE"))
+                    conn.commit()
+                except:
+                    pass  # Views might not exist yet
+                
+                # Drop table if it exists
+                try:
+                    conn.execute(text("DROP TABLE IF EXISTS telecom_customers CASCADE"))
+                    conn.commit()
+                except:
+                    pass
+            
             # Load into PostgreSQL
-            df.to_sql('telecom_customers', self.engine, if_exists='replace', index=False)
+            df.to_sql('telecom_customers', self.engine, if_exists='append', index=False)
             
             print(f"✅ Successfully loaded {len(df)} records into telecom_customers table")
             return True
@@ -127,33 +145,33 @@ class TelecomPostgresLoader:
             create_segments_view = """
             CREATE OR REPLACE VIEW customer_segments AS
             SELECT 
-                customerID,
+                "customerID",
                 gender,
-                SeniorCitizen,
-                Partner,
-                Dependents,
+                "SeniorCitizen",
+                "Partner",
+                "Dependents",
                 tenure,
-                MonthlyCharges,
-                TotalCharges,
-                Contract,
-                InternetService,
-                Churn,
+                "MonthlyCharges",
+                "TotalCharges",
+                "Contract",
+                "InternetService",
+                "Churn",
                 CASE 
-                    WHEN Contract = 'Month-to-month' AND tenure < 12 THEN 'High Risk - New Month-to-Month'
-                    WHEN Contract = 'Month-to-month' AND tenure >= 12 THEN 'Medium Risk - Established Month-to-Month'
-                    WHEN Contract = 'One year' AND tenure < 6 THEN 'Medium Risk - New Annual'
-                    WHEN Contract = 'Two year' THEN 'Low Risk - Long-term'
+                    WHEN "Contract" = 'Month-to-month' AND tenure < 12 THEN 'High Risk - New Month-to-Month'
+                    WHEN "Contract" = 'Month-to-month' AND tenure >= 12 THEN 'Medium Risk - Established Month-to-Month'
+                    WHEN "Contract" = 'One year' AND tenure < 6 THEN 'Medium Risk - New Annual'
+                    WHEN "Contract" = 'Two year' THEN 'Low Risk - Long-term'
                     ELSE 'Stable - Established Annual'
                 END AS customer_segment,
                 CASE 
-                    WHEN Contract = 'Month-to-month' AND tenure < 12 THEN 'High Risk'
-                    WHEN Contract = 'Month-to-month' AND tenure < 24 THEN 'Medium Risk'
-                    WHEN Contract = 'One year' AND tenure < 6 THEN 'Medium Risk'
+                    WHEN "Contract" = 'Month-to-month' AND tenure < 12 THEN 'High Risk'
+                    WHEN "Contract" = 'Month-to-month' AND tenure < 24 THEN 'Medium Risk'
+                    WHEN "Contract" = 'One year' AND tenure < 6 THEN 'Medium Risk'
                     ELSE 'Low Risk'
                 END AS churn_risk,
                 CASE 
-                    WHEN TotalCharges > 0 THEN TotalCharges
-                    ELSE MonthlyCharges * tenure 
+                    WHEN "TotalCharges" > 0 THEN "TotalCharges"
+                    ELSE "MonthlyCharges" * tenure 
                 END AS clv
             FROM telecom_customers;
             """
@@ -162,30 +180,31 @@ class TelecomPostgresLoader:
             create_churn_summary_view = """
             CREATE OR REPLACE VIEW churn_summary AS
             SELECT 
-                Contract,
-                InternetService,
+                "Contract",
+                "InternetService",
                 CASE 
-                    WHEN SeniorCitizen = 1 THEN 'Senior'
+                    WHEN "SeniorCitizen" = 1 THEN 'Senior'
                     ELSE 'Non-Senior'
                 END AS age_group,
                 CASE 
-                    WHEN Partner = 'Yes' AND Dependents = 'Yes' THEN 'Family'
-                    WHEN Partner = 'Yes' OR Dependents = 'Yes' THEN 'Couple/Single Parent'
+                    WHEN "Partner" = 'Yes' AND "Dependents" = 'Yes' THEN 'Family'
+                    WHEN "Partner" = 'Yes' OR "Dependents" = 'Yes' THEN 'Couple/Single Parent'
                     ELSE 'Single'
                 END AS household_type,
                 COUNT(*) AS customer_count,
-                ROUND(AVG(MonthlyCharges), 2) AS avg_monthly_charges,
-                ROUND(AVG(tenure), 1) AS avg_tenure_months,
-                SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
-                ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS churn_rate_percent
+                ROUND(AVG("MonthlyCharges")::numeric, 2) AS avg_monthly_charges,
+                ROUND(AVG(tenure)::numeric, 1) AS avg_tenure_months,
+                SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) AS churned_customers,
+                ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) AS churn_rate_percent
             FROM telecom_customers
-            GROUP BY Contract, InternetService, age_group, household_type;
+            GROUP BY "Contract", "InternetService", age_group, household_type;
             """
             
             # Execute view creation
+            from sqlalchemy import text
             with self.engine.connect() as conn:
-                conn.execute(create_segments_view)
-                conn.execute(create_churn_summary_view)
+                conn.execute(text(create_segments_view))
+                conn.execute(text(create_churn_summary_view))
                 conn.commit()
             
             print("✅ Analysis views created successfully")
@@ -200,14 +219,15 @@ class TelecomPostgresLoader:
         try:
             print("🔍 Verifying database setup...")
             
+            from sqlalchemy import text
             with self.engine.connect() as conn:
                 # Check table exists
-                result = conn.execute("""
+                result = conn.execute(text("""
                     SELECT COUNT(*) as total_customers,
-                           SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) as churned_customers,
-                           ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as churn_rate
+                           SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) as churned_customers,
+                           ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) as churn_rate
                     FROM telecom_customers;
-                """)
+                """))
                 
                 row = result.fetchone()
                 print(f"✅ Database verification:")
@@ -216,9 +236,9 @@ class TelecomPostgresLoader:
                 print(f"   - Churn rate: {row[2]}%")
                 
                 # Check views exist
-                result = conn.execute("""
+                result = conn.execute(text("""
                     SELECT COUNT(*) FROM customer_segments;
-                """)
+                """))
                 view_count = result.fetchone()[0]
                 print(f"   - Customer segments view: {view_count:,} records")
                 
@@ -233,30 +253,31 @@ class TelecomPostgresLoader:
         try:
             print("🧪 Running sample queries...")
             
+            from sqlalchemy import text
             with self.engine.connect() as conn:
                 # Sample query 1: Churn by contract
                 print("\n📊 Sample Query 1: Churn Rate by Contract Type")
-                result = conn.execute("""
-                    SELECT Contract,
+                result = conn.execute(text("""
+                    SELECT "Contract",
                            COUNT(*) as total_customers,
-                           SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) as churned_customers,
-                           ROUND(SUM(CASE WHEN Churn = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as churn_rate_percent
+                           SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) as churned_customers,
+                           ROUND((SUM(CASE WHEN "Churn" = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))::numeric, 2) as churn_rate_percent
                     FROM telecom_customers
-                    GROUP BY Contract
+                    GROUP BY "Contract"
                     ORDER BY churn_rate_percent DESC;
-                """)
+                """))
                 
                 for row in result:
                     print(f"   {row[0]}: {row[3]}% churn rate ({row[2]}/{row[1]} customers)")
                 
                 # Sample query 2: Revenue impact
                 print("\n💰 Sample Query 2: Revenue Impact")
-                result = conn.execute("""
+                result = conn.execute(text("""
                     SELECT 
-                        SUM(CASE WHEN Churn = 'Yes' THEN MonthlyCharges ELSE 0 END) as monthly_revenue_lost,
-                        SUM(CASE WHEN Churn = 'Yes' THEN MonthlyCharges * 12 ELSE 0 END) as annual_revenue_lost
+                        SUM(CASE WHEN "Churn" = 'Yes' THEN "MonthlyCharges" ELSE 0 END) as monthly_revenue_lost,
+                        SUM(CASE WHEN "Churn" = 'Yes' THEN "MonthlyCharges" * 12 ELSE 0 END) as annual_revenue_lost
                     FROM telecom_customers;
-                """)
+                """))
                 
                 row = result.fetchone()
                 print(f"   Monthly revenue lost: ${row[0]:,.2f}")
@@ -282,8 +303,15 @@ def main():
     print("POSTGRESQL SETUP FOR TELECOM CHURN ANALYSIS")
     print("=" * 60)
     
-    # Initialize loader
-    loader = TelecomPostgresLoader()
+    # Try to load configuration, otherwise use defaults
+    try:
+        from config import DB_CONFIG
+        print("📋 Using configuration from config.py")
+        loader = TelecomPostgresLoader(**DB_CONFIG)
+    except ImportError:
+        print("⚠️  config.py not found, using default settings")
+        print("💡 To avoid password prompts, create config.py with your database credentials")
+        loader = TelecomPostgresLoader()
     
     try:
         # Step 1: Create database
